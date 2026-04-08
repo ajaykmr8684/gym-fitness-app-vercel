@@ -329,172 +329,234 @@ export const Billing = () => {
           border: '1px solid #e2e8f0',
           overflow: 'hidden'
         }}>
-          <div style={{overflowX: 'auto'}}>
-            <table style={{width: '100%', borderCollapse: 'collapse'}}>
-              <thead>
-                <tr style={{background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Member</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Amount</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Billing Date</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Due Date</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Status</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'center', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleBills.map((bill) => (
-                  <tr 
-                    key={bill.id} 
-                    style={{
-                      borderBottom: '1px solid #e2e8f0',
-                      transition: 'background-color 200ms'
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <td style={{padding: '1rem 1.25rem'}}>
-                      <div style={{fontWeight: '600', color: '#1e293b'}}>{bill.memberName}</div>
-                      <div style={{fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem'}}>ID: {bill.memberId}</div>
-                    </td>
-                    <td style={{padding: '1rem 1.25rem', fontWeight: 'bold', color: '#0369a1'}}>₹{bill.amount}</td>
-                    <td style={{padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b'}}>{formatDate(bill.billingDate)}</td>
-                    <td style={{padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b'}}>{formatDate(bill.dueDate)}</td>
-                    <td style={{padding: '1rem 1.25rem'}}>
-                      {(() => {
-                        const eff = getBillEffectiveStatus(bill);
-                        const cfg = {
-                          paid:    { bg: '#dcfce7', color: '#166534', label: '● Paid' },
-                          pending: { bg: '#fef3c7', color: '#92400e', label: '● Pending' },
-                          overdue: { bg: '#fee2e2', color: '#991b1b', label: '● Overdue' },
-                        }[eff];
-                        return (
-                          <span style={{ display: 'inline-block', padding: '0.375rem 0.75rem', background: cfg.bg, color: cfg.color, borderRadius: '4px', fontSize: '0.85rem', fontWeight: '600' }}>
-                            {cfg.label}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td style={{padding: '1rem 1.25rem'}}>
-                      <div style={{display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap'}}>
+          {isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem' }}>
+              {visibleBills.map((bill) => {
+                const eff = getBillEffectiveStatus(bill);
+                const cfg = {
+                  paid: { bg: '#dcfce7', color: '#166534', label: 'Paid' },
+                  pending: { bg: '#fef3c7', color: '#92400e', label: 'Pending' },
+                  overdue: { bg: '#fee2e2', color: '#991b1b', label: 'Overdue' },
+                }[eff];
+                return (
+                  <div key={bill.id} style={{ padding: '1rem', borderRadius: '14px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '1rem' }}>{bill.memberName}</div>
+                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>ID: {bill.memberId}</div>
+                      </div>
+                      <div style={{ textAlign: 'right', minWidth: '105px' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#0369a1' }}>₹{bill.amount}</div>
+                        <div style={{ marginTop: '0.4rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem 0.75rem', background: cfg.bg, color: cfg.color, borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700' }}>{cfg.label}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#475569' }}><strong>Billing:</strong> {formatDate(bill.billingDate)}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#475569' }}><strong>Due:</strong> {formatDate(bill.dueDate)}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => handleDownloadPDF(bill)}
+                        style={{ flex: 1, minWidth: '110px', padding: '0.75rem', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px', cursor: 'pointer', color: '#0369a1', fontWeight: '700' }}
+                      >
+                        PDF
+                      </button>
+                      <button
+                        onClick={() => handleSendEmail(bill)}
+                        style={{ flex: 1, minWidth: '110px', padding: '0.75rem', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px', cursor: 'pointer', color: '#0369a1', fontWeight: '700' }}
+                      >
+                        Email
+                      </button>
+                      <button
+                        onClick={() => handleSendWhatsApp(bill)}
+                        style={{ flex: 1, minWidth: '110px', padding: '0.75rem', background: '#ecfdf5', border: '1px solid #d1fae5', borderRadius: '10px', cursor: 'pointer', color: '#0f766e', fontWeight: '700' }}
+                      >
+                        WhatsApp
+                      </button>
+                      {bill.status === 'paid' ? (
+                        <span style={{ flex: 1, minWidth: '110px', padding: '0.75rem', background: '#dcfce7', borderRadius: '10px', color: '#166534', fontWeight: '700', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bbf7d0' }}>
+                          Paid
+                        </span>
+                      ) : (
                         <button
-                          onClick={() => handleDownloadPDF(bill)}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            background: '#f0f9ff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            color: '#0369a1',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            transition: 'all 200ms',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem'
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = '#e0f2fe')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = '#f0f9ff')}
-                          title="Download PDF"
+                          onClick={() => markAsPaid(bill)}
+                          disabled={processingBillId === bill.id}
+                          style={{ flex: 1, minWidth: '110px', padding: '0.75rem', background: processingBillId === bill.id ? '#f1f5f9' : '#fef3c7', border: '1px solid #fde68a', borderRadius: '10px', cursor: processingBillId === bill.id ? 'not-allowed' : 'pointer', color: '#92400e', fontWeight: '700', opacity: processingBillId === bill.id ? 0.65 : 1 }}
                         >
-                          <FileText size={14} />
-                          PDF
+                          {processingBillId === bill.id ? 'Saving...' : 'Mark Paid'}
                         </button>
-                        <button
-                          onClick={() => handleSendEmail(bill)}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            background: '#f0f9ff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            color: '#0369a1',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            transition: 'all 200ms',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem'
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = '#e0f2fe')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = '#f0f9ff')}
-                          title="Send Email"
-                        >
-                          <Mail size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleSendWhatsApp(bill)}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            background: '#f0fdf4',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            color: '#10b981',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            transition: 'all 200ms',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem'
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = '#e0fdf4')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = '#f0fdf4')}
-                          title="Send WhatsApp"
-                        >
-                          <MessageCircle size={14} />
-                        </button>
-                        {bill.status === 'paid' ? (
-                          <span
-                            style={{
-                              padding: '0.5rem 0.75rem',
-                              background: '#dcfce7',
-                              borderRadius: '6px',
-                              color: '#166534',
-                              fontSize: '0.85rem',
-                              fontWeight: '600',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.375rem',
-                              border: '1px solid #bbf7d0'
-                            }}
-                          >
-                            <CheckCircle2 size={14} />
-                            Already Paid
-                          </span>
-                        ) : (
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{overflowX: 'auto'}}>
+              <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                <thead>
+                  <tr style={{background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Member</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Amount</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Billing Date</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Due Date</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Status</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'center', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleBills.map((bill) => {
+                    const eff = getBillEffectiveStatus(bill);
+                    const cfg = {
+                      paid: { bg: '#dcfce7', color: '#166534', label: '● Paid' },
+                      pending: { bg: '#fef3c7', color: '#92400e', label: '● Pending' },
+                      overdue: { bg: '#fee2e2', color: '#991b1b', label: '● Overdue' },
+                    }[eff];
+                    return (
+                      <tr 
+                        key={bill.id} 
+                        style={{
+                          borderBottom: '1px solid #e2e8f0',
+                          transition: 'background-color 200ms'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                      <td style={{padding: '1rem 1.25rem'}}>
+                        <div style={{fontWeight: '600', color: '#1e293b'}}>{bill.memberName}</div>
+                        <div style={{fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem'}}>ID: {bill.memberId}</div>
+                      </td>
+                      <td style={{padding: '1rem 1.25rem', fontWeight: 'bold', color: '#0369a1'}}>₹{bill.amount}</td>
+                      <td style={{padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b'}}>{formatDate(bill.billingDate)}</td>
+                      <td style={{padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b'}}>{formatDate(bill.dueDate)}</td>
+                      <td style={{padding: '1rem 1.25rem'}}>
+                        <span style={{ display: 'inline-block', padding: '0.375rem 0.75rem', background: cfg.bg, color: cfg.color, borderRadius: '4px', fontSize: '0.85rem', fontWeight: '600' }}>
+                          {cfg.label}
+                        </span>
+                      </td>
+                      <td style={{padding: '1rem 1.25rem'}}>
+                        <div style={{display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap'}}>
                           <button
-                            onClick={() => markAsPaid(bill)}
-                            disabled={processingBillId === bill.id}
+                            onClick={() => handleDownloadPDF(bill)}
                             style={{
                               padding: '0.5rem 0.75rem',
-                              background: processingBillId === bill.id ? '#f1f5f9' : '#fef3c7',
+                              background: '#f0f9ff',
                               border: 'none',
                               borderRadius: '6px',
-                              cursor: processingBillId === bill.id ? 'not-allowed' : 'pointer',
-                              color: processingBillId === bill.id ? '#94a3b8' : '#92400e',
+                              cursor: 'pointer',
+                              color: '#0369a1',
                               fontSize: '0.85rem',
                               fontWeight: '600',
                               transition: 'all 200ms',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.375rem',
-                              opacity: processingBillId === bill.id ? 0.6 : 1
+                              gap: '0.375rem'
                             }}
-                            onMouseEnter={(e) => { if (processingBillId !== bill.id) (e.currentTarget as HTMLElement).style.background = '#fde68a'; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = processingBillId === bill.id ? '#f1f5f9' : '#fef3c7'; }}
-                            title="Mark as Paid"
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#e0f2fe')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#f0f9ff')}
+                            title="Download PDF"
                           >
-                            <CheckCircle2 size={14} />
-                            {processingBillId === bill.id ? 'Saving...' : 'Mark Paid'}
+                            <FileText size={14} />
+                            PDF
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          <button
+                            onClick={() => handleSendEmail(bill)}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              background: '#f0f9ff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              color: '#0369a1',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              transition: 'all 200ms',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#e0f2fe')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#f0f9ff')}
+                            title="Send Email"
+                          >
+                            <Mail size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleSendWhatsApp(bill)}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              background: '#f0fdf4',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              color: '#10b981',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              transition: 'all 200ms',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#e0fdf4')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#f0fdf4')}
+                            title="Send WhatsApp"
+                          >
+                            <MessageCircle size={14} />
+                          </button>
+                          {bill.status === 'paid' ? (
+                            <span
+                              style={{
+                                padding: '0.5rem 0.75rem',
+                                background: '#dcfce7',
+                                borderRadius: '6px',
+                                color: '#166534',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                border: '1px solid #bbf7d0'
+                              }}
+                            >
+                              <CheckCircle2 size={14} />
+                              Already Paid
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => markAsPaid(bill)}
+                              disabled={processingBillId === bill.id}
+                              style={{
+                                padding: '0.5rem 0.75rem',
+                                background: processingBillId === bill.id ? '#f1f5f9' : '#fef3c7',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: processingBillId === bill.id ? 'not-allowed' : 'pointer',
+                                color: processingBillId === bill.id ? '#94a3b8' : '#92400e',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                                transition: 'all 200ms',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                opacity: processingBillId === bill.id ? 0.6 : 1
+                              }}
+                              onMouseEnter={(e) => { if (processingBillId !== bill.id) (e.currentTarget as HTMLElement).style.background = '#fde68a'; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = processingBillId === bill.id ? '#f1f5f9' : '#fef3c7'; }}
+                              title="Mark as Paid"
+                            >
+                              <CheckCircle2 size={14} />
+                              {processingBillId === bill.id ? 'Saving...' : 'Mark Paid'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ) : (
         <div style={{

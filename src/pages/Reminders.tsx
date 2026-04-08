@@ -297,120 +297,165 @@ export const Reminders = () => {
           border: '1px solid #e2e8f0',
           overflow: 'hidden'
         }}>
-          <div style={{overflowX: 'auto'}}>
-            <table style={{width: '100%', borderCollapse: 'collapse'}}>
-              <thead>
-                <tr style={{background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Member</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Type</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Message</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Due Date</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Status</th>
-                  <th style={{padding: '1rem 1.25rem', textAlign: 'center', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleReminders.map((reminder) => (
-                  <tr 
-                    key={reminder.id} 
-                    style={{
-                      borderBottom: '1px solid #e2e8f0',
-                      transition: 'background-color 200ms'
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <td style={{padding: '1rem 1.25rem'}}>
-                      <div style={{fontWeight: '600', color: '#1e293b'}}>{reminder.memberName}</div>
-                      <div style={{fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem'}}>ID: {reminder.memberId}</div>
-                    </td>
-                    <td style={{padding: '1rem 1.25rem'}}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '0.375rem 0.75rem',
-                        background: '#f0f9ff',
-                        color: '#0369a1',
-                        borderRadius: '4px',
-                        fontSize: '0.85rem',
-                        fontWeight: '500'
-                      }}>
+          {isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem' }}>
+              {visibleReminders.map((reminder) => (
+                <div key={reminder.id} style={{ padding: '1rem', borderRadius: '14px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '1rem' }}>{reminder.memberName}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>ID: {reminder.memberId}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', minWidth: '110px' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem 0.75rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700', background: '#f0f9ff', color: '#0369a1' }}>
                         {reminderTypes[reminder.type]}
-                      </span>
-                    </td>
-                    <td style={{padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                      {reminder.message}
-                    </td>
-                    <td style={{padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b'}}>{formatDate(reminder.dueDate)}</td>
-                    <td style={{padding: '1rem 1.25rem'}}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '0.375rem 0.75rem',
-                        background: reminder.sent ? '#dcfce7' : '#fef3c7',
-                        color: reminder.sent ? '#166534' : '#92400e',
-                        borderRadius: '4px',
-                        fontSize: '0.85rem',
-                        fontWeight: '600'
-                      }}>
-                        {reminder.sent ? '● Sent' : '● Pending'}
-                      </span>
-                    </td>
-                    <td style={{padding: '1rem 1.25rem'}}>
-                      <div style={{display: 'flex', justifyContent: 'center', gap: '0.5rem'}}>
-                        <button
-                          onClick={() => handleSendEmail(reminder)}
-                          disabled={reminder.sentVia.includes('email')}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            background: reminder.sentVia.includes('email') ? '#dcfce7' : '#f0f9ff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: reminder.sentVia.includes('email') ? 'default' : 'pointer',
-                            color: reminder.sentVia.includes('email') ? '#166534' : '#0369a1',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            transition: 'all 200ms',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem',
-                            opacity: reminder.sentVia.includes('email') ? 0.6 : 1
-                          }}
-                          onMouseEnter={(e) => !reminder.sentVia.includes('email') && (e.currentTarget.style.background = '#e0f2fe')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = reminder.sentVia.includes('email') ? '#dcfce7' : '#f0f9ff')}
-                          title="Send Email"
-                        >
-                          <Mail size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleSendWhatsApp(reminder)}
-                          disabled={reminder.sentVia.includes('whatsapp')}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            background: reminder.sentVia.includes('whatsapp') ? '#dcfce7' : '#f0fdf4',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: reminder.sentVia.includes('whatsapp') ? 'default' : 'pointer',
-                            color: reminder.sentVia.includes('whatsapp') ? '#166534' : '#10b981',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            transition: 'all 200ms',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem',
-                            opacity: reminder.sentVia.includes('whatsapp') ? 0.6 : 1
-                          }}
-                          onMouseEnter={(e) => !reminder.sentVia.includes('whatsapp') && (e.currentTarget.style.background = '#e0fdf4')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = reminder.sentVia.includes('whatsapp') ? '#dcfce7' : '#f0fdf4')}
-                          title="Send WhatsApp"
-                        >
-                          <MessageCircle size={14} />
-                        </button>
                       </div>
-                    </td>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.5, minHeight: '3.5rem' }}>
+                    {reminder.message}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#475569' }}><strong>Due:</strong> {formatDate(reminder.dueDate)}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem 0.75rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700', background: reminder.sent ? '#dcfce7' : '#fef3c7', color: reminder.sent ? '#166534' : '#92400e' }}>
+                      {reminder.sent ? 'Sent' : 'Pending'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => handleSendEmail(reminder)}
+                      disabled={reminder.sentVia.includes('email')}
+                      style={{ flex: 1, minWidth: '110px', padding: '0.75rem', background: reminder.sentVia.includes('email') ? '#dcfce7' : '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px', cursor: reminder.sentVia.includes('email') ? 'not-allowed' : 'pointer', color: reminder.sentVia.includes('email') ? '#166534' : '#0369a1', fontWeight: '700', opacity: reminder.sentVia.includes('email') ? 0.65 : 1 }}
+                    >
+                      Email
+                    </button>
+                    <button
+                      onClick={() => handleSendWhatsApp(reminder)}
+                      disabled={reminder.sentVia.includes('whatsapp')}
+                      style={{ flex: 1, minWidth: '110px', padding: '0.75rem', background: reminder.sentVia.includes('whatsapp') ? '#dcfce7' : '#ecfdf5', border: '1px solid #d1fae5', borderRadius: '10px', cursor: reminder.sentVia.includes('whatsapp') ? 'not-allowed' : 'pointer', color: reminder.sentVia.includes('whatsapp') ? '#166534' : '#0f766e', fontWeight: '700', opacity: reminder.sentVia.includes('whatsapp') ? 0.65 : 1 }}
+                    >
+                      WhatsApp
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{overflowX: 'auto'}}>
+              <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                <thead>
+                  <tr style={{background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Member</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Type</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Message</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Due Date</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Status</th>
+                    <th style={{padding: '1rem 1.25rem', textAlign: 'center', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b'}}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {visibleReminders.map((reminder) => (
+                    <tr 
+                      key={reminder.id} 
+                      style={{
+                        borderBottom: '1px solid #e2e8f0',
+                        transition: 'background-color 200ms'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <td style={{padding: '1rem 1.25rem'}}>
+                        <div style={{fontWeight: '600', color: '#1e293b'}}>{reminder.memberName}</div>
+                        <div style={{fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem'}}>ID: {reminder.memberId}</div>
+                      </td>
+                      <td style={{padding: '1rem 1.25rem'}}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '0.375rem 0.75rem',
+                          background: '#f0f9ff',
+                          color: '#0369a1',
+                          borderRadius: '4px',
+                          fontSize: '0.85rem',
+                          fontWeight: '500'
+                        }}>
+                          {reminderTypes[reminder.type]}
+                        </span>
+                      </td>
+                      <td style={{padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        {reminder.message}
+                      </td>
+                      <td style={{padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b'}}>{formatDate(reminder.dueDate)}</td>
+                      <td style={{padding: '1rem 1.25rem'}}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '0.375rem 0.75rem',
+                          background: reminder.sent ? '#dcfce7' : '#fef3c7',
+                          color: reminder.sent ? '#166534' : '#92400e',
+                          borderRadius: '4px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600'
+                        }}>
+                          {reminder.sent ? '● Sent' : '● Pending'}
+                        </span>
+                      </td>
+                      <td style={{padding: '1rem 1.25rem'}}>
+                        <div style={{display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap'}}>
+                          <button
+                            onClick={() => handleSendEmail(reminder)}
+                            disabled={reminder.sentVia.includes('email')}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              background: reminder.sentVia.includes('email') ? '#dcfce7' : '#f0f9ff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: reminder.sentVia.includes('email') ? 'default' : 'pointer',
+                              color: reminder.sentVia.includes('email') ? '#166534' : '#0369a1',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              transition: 'all 200ms',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              opacity: reminder.sentVia.includes('email') ? 0.6 : 1
+                            }}
+                            onMouseEnter={(e) => !reminder.sentVia.includes('email') && (e.currentTarget.style.background = '#e0f2fe')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = reminder.sentVia.includes('email') ? '#dcfce7' : '#f0f9ff')}
+                            title="Send Email"
+                          >
+                            <Mail size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleSendWhatsApp(reminder)}
+                            disabled={reminder.sentVia.includes('whatsapp')}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              background: reminder.sentVia.includes('whatsapp') ? '#dcfce7' : '#f0fdf4',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: reminder.sentVia.includes('whatsapp') ? 'default' : 'pointer',
+                              color: reminder.sentVia.includes('whatsapp') ? '#166534' : '#10b981',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              transition: 'all 200ms',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              opacity: reminder.sentVia.includes('whatsapp') ? 0.6 : 1
+                            }}
+                            onMouseEnter={(e) => !reminder.sentVia.includes('whatsapp') && (e.currentTarget.style.background = '#e0fdf4')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = reminder.sentVia.includes('whatsapp') ? '#dcfce7' : '#f0fdf4')}
+                            title="Send WhatsApp"
+                          >
+                            <MessageCircle size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ) : (
         <div style={{

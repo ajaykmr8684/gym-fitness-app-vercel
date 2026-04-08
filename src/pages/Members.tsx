@@ -308,147 +308,244 @@ export const Members = () => {
       </div>
 
       <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Name</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Email</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Phone</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Plan</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Expiry</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Status</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Amount</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'center', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleMembers.map((member) => {
-                const effStatus = getEffectiveStatus(member);
-                const badge = STATUS_BADGE[effStatus];
-                return (
-                  <tr
-                    key={member.id}
-                    style={{ borderBottom: '1px solid #e2e8f0', transition: 'background-color 200ms' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            overflow: 'hidden',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: member.photoUrl ? 'transparent' : 'linear-gradient(135deg, #0ea5e9, #0369a1)',
-                            color: 'white',
-                            fontWeight: 'bold',
-                            fontSize: '0.85rem',
-                            transition: 'transform 200ms ease',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => {
-                            setViewMember(member);
-                            setViewPhotoOnly(true);
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.transform = 'scale(1.3)';
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
-                          }}
-                        >
-                          {member.photoUrl ? (
-                            <img
-                              src={member.photoUrl}
-                              alt={member.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                          ) : (
-                            member.name.charAt(0).toUpperCase()
-                          )}
-                        </div>
+        {isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem' }}>
+            {visibleMembers.map((member) => {
+              const effStatus = getEffectiveStatus(member);
+              const badge = STATUS_BADGE[effStatus];
+              return (
+                <div key={member.id} style={{ padding: '1rem', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', minWidth: 0, flex: 1 }}>
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: member.photoUrl ? 'transparent' : 'linear-gradient(135deg, #0ea5e9, #0369a1)',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: '0.95rem',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => {
+                          setViewMember(member);
+                          setViewPhotoOnly(true);
+                        }}
+                      >
+                        {member.photoUrl ? (
+                          <img src={member.photoUrl} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          member.name.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
                         <button
                           onClick={() => setViewMember(member)}
-                          style={{ fontWeight: '600', color: '#1e293b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.9rem' }}
-                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#0ea5e9')}
-                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#1e293b')}
+                          style={{ fontWeight: '700', color: '#0f172a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '1rem', textAlign: 'left', width: '100%' }}
                         >
                           {member.name}
                         </button>
+                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {member.email}
+                        </div>
                       </div>
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b' }}>{member.email}</td>
-                    <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b' }}>{member.phone}</td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <span style={{ display: 'inline-block', padding: '0.375rem 0.75rem', background: '#f0f9ff', color: '#0369a1', borderRadius: '4px', fontSize: '0.85rem', fontWeight: '500' }}>
-                        {member.planType.charAt(0).toUpperCase() + member.planType.slice(1)}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: effStatus === 'expired' ? '#dc2626' : '#64748b', fontWeight: effStatus === 'expired' ? '600' : '400' }}>
-                      {formatDate(member.expiryDate)}
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <span style={{ display: 'inline-block', padding: '0.375rem 0.75rem', background: badge.bg, color: badge.color, borderRadius: '4px', fontSize: '0.85rem', fontWeight: '600' }}>
-                        {badge.label}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontWeight: 'bold', color: '#0369a1' }}>₹{member.amount}</td>
-                    <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => setViewMember(member)}
-                          style={{ padding: '0.5rem', background: '#f0f9ff', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#0369a1', transition: 'all 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#e0f2fe')}
-                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = '#f0f9ff')}
-                          title="View Details"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleRenewMember(member)}
-                          disabled={renewingMemberId === member.id}
-                          style={{ padding: '0.5rem', background: '#f0fdf4', border: 'none', borderRadius: '6px', cursor: renewingMemberId === member.id ? 'not-allowed' : 'pointer', color: '#10b981', transition: 'all 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: renewingMemberId === member.id ? 0.6 : 1 }}
-                          onMouseEnter={(e) => {
-                            if (renewingMemberId !== member.id) (e.currentTarget as HTMLElement).style.background = '#dcfce7';
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = '#f0fdf4';
-                          }}
-                          title="Renew Membership"
-                        >
-                          <RefreshCw size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleOpenEditModal(member)}
-                          style={{ padding: '0.5rem', background: '#f0f9ff', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#0369a1', transition: 'all 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#e0f2fe')}
-                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = '#f0f9ff')}
-                          title="Edit"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMember(member.id)}
-                          style={{ padding: '0.5rem', background: '#fef2f2', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', transition: 'all 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#fee2e2')}
-                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = '#fef2f2')}
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                    </div>
+                    <div style={{ textAlign: 'right', minWidth: '110px' }}>
+                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0369a1' }}>₹{member.amount}</div>
+                      <div style={{ marginTop: '0.35rem' }}>
+                        <span style={{ display: 'inline-block', padding: '0.35rem 0.75rem', background: badge.bg, color: badge.color, borderRadius: '999px', fontSize: '0.78rem', fontWeight: '700' }}>
+                          {badge.label}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#475569' }}><strong>Phone:</strong> {member.phone}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#475569' }}><strong>Plan:</strong> {member.planType.charAt(0).toUpperCase() + member.planType.slice(1)}</div>
+                    <div style={{ fontSize: '0.85rem', color: effStatus === 'expired' ? '#dc2626' : '#475569' }}><strong>Expiry:</strong> {formatDate(member.expiryDate)}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#475569' }}><strong>Status:</strong> {badge.label.replace('● ', '')}</div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setViewMember(member)}
+                      style={{ flex: 1, minWidth: '120px', padding: '0.75rem', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px', cursor: 'pointer', color: '#0369a1', fontWeight: '700' }}
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleRenewMember(member)}
+                      disabled={renewingMemberId === member.id}
+                      style={{ flex: 1, minWidth: '120px', padding: '0.75rem', background: renewingMemberId === member.id ? '#f1f5f9' : '#ecfdf5', border: '1px solid #d1fae5', borderRadius: '10px', cursor: renewingMemberId === member.id ? 'not-allowed' : 'pointer', color: '#0f766e', fontWeight: '700', opacity: renewingMemberId === member.id ? 0.65 : 1 }}
+                    >
+                      Renew
+                    </button>
+                    <button
+                      onClick={() => handleOpenEditModal(member)}
+                      style={{ flex: 1, minWidth: '120px', padding: '0.75rem', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px', cursor: 'pointer', color: '#0369a1', fontWeight: '700' }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMember(member.id)}
+                      style={{ flex: 1, minWidth: '120px', padding: '0.75rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', cursor: 'pointer', color: '#b91c1c', fontWeight: '700' }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Name</th>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Email</th>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Phone</th>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Plan</th>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Expiry</th>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Status</th>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Amount</th>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'center', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleMembers.map((member) => {
+                  const effStatus = getEffectiveStatus(member);
+                  const badge = STATUS_BADGE[effStatus];
+                  return (
+                    <tr
+                      key={member.id}
+                      style={{ borderBottom: '1px solid #e2e8f0', transition: 'background-color 200ms' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: member.photoUrl ? 'transparent' : 'linear-gradient(135deg, #0ea5e9, #0369a1)',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              fontSize: '0.85rem',
+                              transition: 'transform 200ms ease',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => {
+                              setViewMember(member);
+                              setViewPhotoOnly(true);
+                            }}
+                            onMouseEnter={(e) => {
+                              (e.currentTarget as HTMLElement).style.transform = 'scale(1.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+                            }}
+                          >
+                            {member.photoUrl ? (
+                              <img
+                                src={member.photoUrl}
+                                alt={member.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              member.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setViewMember(member)}
+                            style={{ fontWeight: '600', color: '#1e293b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.9rem' }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#0ea5e9')}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#1e293b')}
+                          >
+                            {member.name}
+                          </button>
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b' }}>{member.email}</td>
+                      <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: '#64748b' }}>{member.phone}</td>
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <span style={{ display: 'inline-block', padding: '0.375rem 0.75rem', background: '#f0f9ff', color: '#0369a1', borderRadius: '4px', fontSize: '0.85rem', fontWeight: '500' }}>
+                          {member.planType.charAt(0).toUpperCase() + member.planType.slice(1)}
+                        </span>
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: effStatus === 'expired' ? '#dc2626' : '#64748b', fontWeight: effStatus === 'expired' ? '600' : '400' }}>
+                        {formatDate(member.expiryDate)}
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <span style={{ display: 'inline-block', padding: '0.375rem 0.75rem', background: badge.bg, color: badge.color, borderRadius: '4px', fontSize: '0.85rem', fontWeight: '600' }}>
+                          {badge.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontWeight: 'bold', color: '#0369a1' }}>₹{member.amount}</td>
+                      <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => setViewMember(member)}
+                            style={{ padding: '0.5rem', background: '#f0f9ff', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#0369a1', transition: 'all 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#e0f2fe')}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = '#f0f9ff')}
+                            title="View Details"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleRenewMember(member)}
+                            disabled={renewingMemberId === member.id}
+                            style={{ padding: '0.5rem', background: '#f0fdf4', border: 'none', borderRadius: '6px', cursor: renewingMemberId === member.id ? 'not-allowed' : 'pointer', color: '#10b981', transition: 'all 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: renewingMemberId === member.id ? 0.6 : 1 }}
+                            onMouseEnter={(e) => {
+                              if (renewingMemberId !== member.id) (e.currentTarget as HTMLElement).style.background = '#dcfce7';
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.currentTarget as HTMLElement).style.background = '#f0fdf4';
+                            }}
+                            title="Renew Membership"
+                          >
+                            <RefreshCw size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleOpenEditModal(member)}
+                            style={{ padding: '0.5rem', background: '#f0f9ff', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#0369a1', transition: 'all 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#e0f2fe')}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = '#f0f9ff')}
+                            title="Edit"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMember(member.id)}
+                            style={{ padding: '0.5rem', background: '#fef2f2', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', transition: 'all 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#fee2e2')}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = '#fef2f2')}
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {filteredMembers.length === 0 && (
           <div style={{ textAlign: 'center', paddingTop: '3rem', paddingBottom: '3rem', color: '#94a3b8' }}>
