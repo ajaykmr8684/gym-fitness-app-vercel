@@ -1,9 +1,29 @@
 import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Users, FileText, AlertCircle, TrendingUp, Target, Activity, ArrowUp, Database, AlertTriangle } from 'lucide-react';
+import { Users, FileText, AlertCircle, TrendingUp, Target, Activity, ArrowUp, ArrowDown, Database, AlertTriangle } from 'lucide-react';
 import { seedDatabase } from '../utils/seedData';
 import { formatDate } from '../utils/db';
 import { useIsMobile } from '../hooks/useIsMobile';
+
+const parseDate = (value: string): Date => {
+  const parsed = new Date(value);
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+};
+
+const isDateInRange = (date: Date, start: Date, end: Date): boolean => {
+  return date >= start && date < end;
+};
+
+const getPercentChange = (current: number, previous: number): string => {
+  if (previous === 0) {
+    return current === 0 ? '' : '+100%';
+  }
+  const change = ((current - previous) / previous) * 100;
+  const rounded = Math.round(change);
+  const prefix = rounded > 0 ? '+' : '';
+  return `${prefix}${rounded}%`;
+};
 
 export const Dashboard = () => {
   const { members, bills, refreshData } = useAppContext();
@@ -34,6 +54,45 @@ export const Dashboard = () => {
   const pendingBills = bills.filter(b => b.status === 'pending').length;
   const overdueAmount = bills.filter(b => b.status === 'overdue').reduce((sum, b) => sum + (b.amount - b.amountPaid), 0);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const currentPeriodStart = new Date(today);
+  currentPeriodStart.setDate(today.getDate() - 6);
+  const currentPeriodEnd = new Date(today);
+  currentPeriodEnd.setDate(today.getDate() + 1);
+  const previousPeriodStart = new Date(today);
+  previousPeriodStart.setDate(today.getDate() - 13);
+  const previousPeriodEnd = new Date(today);
+  previousPeriodEnd.setDate(today.getDate() - 6);
+
+  const newMembersThisWeek = members.filter(m => isDateInRange(parseDate(m.joinDate), currentPeriodStart, currentPeriodEnd)).length;
+  const newMembersLastWeek = members.filter(m => isDateInRange(parseDate(m.joinDate), previousPeriodStart, previousPeriodEnd)).length;
+  const activeMembersTrend = getPercentChange(newMembersThisWeek, newMembersLastWeek);
+
+  const revenueThisWeek = bills
+    .filter(b => b.status === 'paid' && isDateInRange(parseDate(b.billingDate), currentPeriodStart, currentPeriodEnd))
+    .reduce((sum, b) => sum + (b.amountPaid || b.amount), 0);
+  const revenueLastWeek = bills
+    .filter(b => b.status === 'paid' && isDateInRange(parseDate(b.billingDate), previousPeriodStart, previousPeriodEnd))
+    .reduce((sum, b) => sum + (b.amountPaid || b.amount), 0);
+  const totalRevenueTrend = getPercentChange(revenueThisWeek, revenueLastWeek);
+
+  const pendingBillsThisWeek = bills.filter(
+    b => b.status === 'pending' && isDateInRange(parseDate(b.billingDate), currentPeriodStart, currentPeriodEnd)
+  ).length;
+  const pendingBillsLastWeek = bills.filter(
+    b => b.status === 'pending' && isDateInRange(parseDate(b.billingDate), previousPeriodStart, previousPeriodEnd)
+  ).length;
+  const pendingBillsTrend = getPercentChange(pendingBillsThisWeek, pendingBillsLastWeek);
+
+  const overdueAmountThisWeek = bills
+    .filter(b => b.status !== 'paid' && isDateInRange(parseDate(b.dueDate), currentPeriodStart, currentPeriodEnd))
+    .reduce((sum, b) => sum + (b.amount - (b.amountPaid || 0)), 0);
+  const overdueAmountLastWeek = bills
+    .filter(b => b.status !== 'paid' && isDateInRange(parseDate(b.dueDate), previousPeriodStart, previousPeriodEnd))
+    .reduce((sum, b) => sum + (b.amount - (b.amountPaid || 0)), 0);
+  const overdueAmountTrend = getPercentChange(overdueAmountThisWeek, overdueAmountLastWeek);
+
   return (
     <div style={{display: 'flex', flexDirection: 'column', gap: isMobile ? '1rem' : '1.5rem'}}>
       {/* Professional Header - Company Name with Seed Button */}
@@ -46,7 +105,7 @@ export const Dashboard = () => {
           value={activeMembers}
           color="#0ea5e9"
           bgColor="#f0f9ff"
-          trend="+12%"
+          trend={activeMembersTrend}
         />
         <StatCard 
           icon={FileText}
@@ -54,7 +113,7 @@ export const Dashboard = () => {
           value={pendingBills}
           color="#06b6d4"
           bgColor="#ecf0ff"
-          trend=""
+          trend={pendingBillsTrend}
         />
         <StatCard 
           icon={TrendingUp}
@@ -62,7 +121,7 @@ export const Dashboard = () => {
           value={`₹${totalRevenue}`}
           color="#10b981"
           bgColor="#f0fdf4"
-          trend="+8%"
+          trend={totalRevenueTrend}
         />
         <StatCard 
           icon={AlertCircle}
@@ -70,7 +129,7 @@ export const Dashboard = () => {
           value={`₹${overdueAmount}`}
           color="#f97316"
           bgColor="#fff7ed"
-          trend=""
+          trend={overdueAmountTrend}
         />
       </div>
 
@@ -280,8 +339,8 @@ const StatCard = ({ icon: Icon, label, value, color, bgColor, trend }: any) => (
         <Icon size={20} color={color} />
       </div>
       {trend && (
-        <div style={{display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: '600', color: '#10b981'}}>
-          <ArrowUp size={12} />
+        <div style={{display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: '600', color: trend.startsWith('-') ? '#ef4444' : '#10b981'}}>
+          {trend.startsWith('-') ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
           {trend}
         </div>
       )}
