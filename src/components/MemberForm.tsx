@@ -32,25 +32,67 @@ export const MemberForm = ({ member, onSubmit, onCancel }: MemberFormProps) => {
     whatsappOptIn: member?.whatsappOptIn || false,
   });
 
+  const resizeImageFile = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          const aspectRatio = width / height;
+
+          if (width > maxWidth || height > maxHeight) {
+            if (aspectRatio > 1) {
+              width = maxWidth;
+              height = Math.round(maxWidth / aspectRatio);
+            } else {
+              height = maxHeight;
+              width = Math.round(maxHeight * aspectRatio);
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Could not create canvas context'));
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const resizedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(resizedDataUrl);
+        };
+        img.onerror = (error) => reject(error);
+        img.src = reader.result as string;
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePhotoChange = async (file?: File) => {
+    if (!file) {
+      setPhotoPreview(null);
+      return;
+    }
+
+    try {
+      const compressed = await resizeImageFile(file, 1200, 1200, 0.7);
+      setPhotoPreview(compressed);
+    } catch (error) {
+      console.error('Error processing photo:', error);
+      alert('Could not process the photo. Please try a smaller image or take the photo again.');
+    }
+  };
+
   // Calculate pricing based on current selections
   const pricing = useMemo(() => {
     return calculateMembershipPrice(formData.planType, formData.strength, formData.cardio, formData.training);
   }, [formData.planType, formData.strength, formData.cardio, formData.training]);
 
   const plan = membershipPlans.find(p => p.type === formData.planType);
-
-  const handlePhotoChange = (file?: File) => {
-    if (!file) {
-      setPhotoPreview(null);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +180,9 @@ export const MemberForm = ({ member, onSubmit, onCancel }: MemberFormProps) => {
         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b', marginBottom: '0.5rem' }}>
           Member Photo
         </label>
+        <p style={{ margin: 0, marginBottom: '0.75rem', fontSize: '0.8rem', color: '#475569' }}>
+          Photos are resized automatically on mobile so camera uploads stay fast and maintain quality.
+        </p>
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: 'center' }}>
           <div style={{ width: '96px', height: '96px', borderRadius: '16px', overflow: 'hidden', background: '#f8fafc', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {photoPreview ? (
