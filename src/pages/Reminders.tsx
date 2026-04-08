@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Plus, Mail, MessageCircle, Trash2, Search } from 'lucide-react';
+import { Plus, Mail, MessageCircle, Trash2, Search, Filter } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/Button';
+import { useToast } from '../components/Toast';
 import { useAppContext } from '../context/AppContext';
 import { addReminder, updateReminder, formatDate } from '../utils/db';
 import { sendReminderEmail, sendReminderWhatsApp } from '../utils/notifications';
@@ -8,10 +10,14 @@ import { Reminder } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export const Reminders = () => {
-  const { members, reminders, refreshData } = useAppContext();
+  const { members, reminders, refreshData, loading, error } = useAppContext();
+  const toast = useToast();
   const isMobile = useIsMobile();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [reminderTypeFilter, setReminderTypeFilter] = useState<'all' | 'membership_expiry' | 'payment_due' | 'payment_overdue'>('all');
+  const [sortBy, setSortBy] = useState<'dueDate' | 'memberName' | 'type'>('dueDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [formData, setFormData] = useState({
     memberId: '',
     type: 'membership_expiry' as 'membership_expiry' | 'payment_due' | 'payment_overdue',
@@ -20,10 +26,21 @@ export const Reminders = () => {
   });
 
   const selectedMember = members.find(m => m.id === formData.memberId);
-  const filteredReminders = reminders.filter(r =>
-    r.memberName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.memberId.includes(searchTerm)
-  );
+  const filteredReminders = reminders.filter(r => {
+    const matchesSearch =
+      r.memberName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.memberId.includes(searchTerm);
+    if (!matchesSearch) return false;
+    if (reminderTypeFilter !== 'all' && r.type !== reminderTypeFilter) return false;
+    return true;
+  });
+
+  const visibleReminders = [...filteredReminders].sort((a, b) => {
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    if (sortBy === 'memberName') return a.memberName.localeCompare(b.memberName) * direction;
+    if (sortBy === 'type') return a.type.localeCompare(b.type) * direction;
+    return (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()) * direction;
+  });
 
   const reminderTypes = {
     membership_expiry: 'Membership Expiry',
@@ -33,7 +50,7 @@ export const Reminders = () => {
 
   const handleCreateReminder = async () => {
     if (!formData.memberId || !formData.message) {
-      alert('Please fill in all required fields');
+      toast.error('Fill required fields', 'Select a member and write a reminder message.');
       return;
     }
 
@@ -58,9 +75,10 @@ export const Reminders = () => {
         dueDate: new Date().toISOString().split('T')[0],
       });
       setIsModalOpen(false);
+      toast.success('Reminder created', 'The reminder was added successfully.');
       await refreshData();
     } catch (error) {
-      alert('Error creating reminder');
+      toast.error('Could not create reminder', 'Please try again.');
       console.error(error);
     }
   };
@@ -78,10 +96,10 @@ export const Reminders = () => {
       );
 
       if (sent) {
-        alert('Email draft opened in Gmail! You can review and send it.');
+        toast.success('Email opened', 'Review and send the reminder message in Gmail.');
       }
     } catch (error) {
-      alert('Error opening Gmail');
+      toast.error('Could not open Gmail', 'Please make sure Gmail is available.');
       console.error(error);
     }
   };
@@ -89,7 +107,7 @@ export const Reminders = () => {
   const handleSendWhatsApp = async (reminder: Reminder) => {
     const member = members.find(m => m.id === reminder.memberId);
     if (!member || !member.whatsappOptIn) {
-      alert('Member has not opted in for WhatsApp notifications');
+      toast.error('WhatsApp not available', 'Member has not opted in for WhatsApp notifications.');
       return;
     }
 
@@ -101,10 +119,10 @@ export const Reminders = () => {
       );
 
       if (sent) {
-        alert('WhatsApp Web opened! You can review and send the message.');
+        toast.success('WhatsApp opened', 'Review and send the reminder in WhatsApp Web.');
       }
     } catch (error) {
-      alert('Error opening WhatsApp');
+      toast.error('Could not open WhatsApp', 'Please make sure WhatsApp Web is available.');
       console.error(error);
     }
   };
@@ -140,39 +158,26 @@ export const Reminders = () => {
           <h1 style={{fontSize: isMobile ? '1.35rem' : '1.75rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>Reminders</h1>
           <p style={{fontSize: '0.875rem', color: '#cbd5e1'}}>Send timely notifications to members</p>
         </div>
-        <button
+        <Button
           onClick={() => setIsModalOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.85rem 1.5rem',
-            width: isMobile ? '100%' : 'auto',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '0.95rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 200ms',
-            boxShadow: '0 2px 4px rgba(14, 165, 233, 0.2)',
-            whiteSpace: 'nowrap'
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 8px rgba(14, 165, 233, 0.3)';
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 4px rgba(14, 165, 233, 0.2)';
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-          }}
+          icon={<Plus size={20} />}
+          size="md"
+          fullWidth={isMobile}
         >
-          <Plus size={20} />
-          <span>Create Reminder</span>
-        </button>
+          Create Reminder
+        </Button>
       </div>
+
+      {error && (
+        <div style={{ padding: '1rem', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+          {error}
+        </div>
+      )}
+      {loading && (
+        <div style={{ padding: '1rem', borderRadius: '10px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
+          Loading reminders and members...
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div style={{display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? '0.75rem' : '1rem'}}>
@@ -205,34 +210,83 @@ export const Reminders = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div style={{position: 'relative'}}>
-        <Search size={18} style={{position: 'absolute', left: '1rem', top: '0.875rem', color: '#94a3b8'}} />
-        <input
-          type="text"
-          placeholder="Search by member name or ID..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          style={{
-            width: '100%',
-            paddingLeft: '2.75rem',
-            paddingRight: '1rem',
-            paddingTop: '0.75rem',
-            paddingBottom: '0.75rem',
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            fontSize: '0.95rem',
-            transition: 'all 200ms'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = '#0ea5e9';
-            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.1)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = '#cbd5e1';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        />
+      {/* Search + Filter */}
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '0.75rem', alignItems: isMobile ? 'stretch' : 'center' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '0.875rem', color: '#94a3b8' }} />
+          <input
+            type="text"
+            placeholder="Search by member name or ID..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              paddingLeft: '2.75rem',
+              paddingRight: '1rem',
+              paddingTop: '0.75rem',
+              paddingBottom: '0.75rem',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              fontSize: '0.95rem',
+              transition: 'all 200ms'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#0ea5e9';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.1)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = '#cbd5e1';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Filter size={16} style={{ color: '#64748b' }} />
+            <select
+              value={reminderTypeFilter}
+              onChange={e => setReminderTypeFilter(e.target.value as 'all' | 'membership_expiry' | 'payment_due' | 'payment_overdue')}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                background: 'white',
+                color: '#1e293b',
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              <option value="all">All Types</option>
+              <option value="membership_expiry">Membership Expiry</option>
+              <option value="payment_due">Payment Due</option>
+              <option value="payment_overdue">Payment Overdue</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as 'dueDate' | 'memberName' | 'type')}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                background: 'white',
+                color: '#1e293b',
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              <option value="dueDate">Sort by Due Date</option>
+              <option value="memberName">Sort by Member</option>
+              <option value="type">Sort by Type</option>
+            </select>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}>
+              {sortDirection === 'asc' ? 'Asc' : 'Desc'}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Reminders Table */}
@@ -256,7 +310,7 @@ export const Reminders = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredReminders.map((reminder) => (
+                {visibleReminders.map((reminder) => (
                   <tr 
                     key={reminder.id} 
                     style={{

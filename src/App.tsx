@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation }
 import { Header } from './components/Header';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/Toast';
 import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { Billing } from './pages/Billing';
@@ -35,21 +36,23 @@ const ProtectedLayout = () => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<ProtectedRoute />}>
-            <Route element={<ProtectedLayout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/members" element={<Members />} />
-              <Route path="/billing" element={<Billing />} />
-              <Route path="/reminders" element={<Reminders />} />
+      <ToastProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<ProtectedLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/members" element={<Members />} />
+                <Route path="/billing" element={<Billing />} />
+                <Route path="/reminders" element={<Reminders />} />
+              </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

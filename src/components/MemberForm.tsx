@@ -1,8 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Member } from '../types';
 import { membershipPlans, calculateExpiryDate, calculateMembershipPrice, basePricing } from '../utils/db';
+import { Button } from '../components/Button';
 import { CheckCircle } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+
+const DEFAULT_MEMBER_PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="#e2e8f0"/><circle cx="60" cy="40" r="28" fill="#cbd5e1"/><rect x="28" y="72" width="64" height="32" rx="16" fill="#cbd5e1"/></svg>`
+)}`;
 
 interface MemberFormProps {
   member?: Member;
@@ -13,6 +18,7 @@ interface MemberFormProps {
 export const MemberForm = ({ member, onSubmit, onCancel }: MemberFormProps) => {
   const isMobile = useIsMobile();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(member?.photoUrl || null);
   const [formData, setFormData] = useState({
     name: member?.name || '',
     email: member?.email || '',
@@ -33,6 +39,19 @@ export const MemberForm = ({ member, onSubmit, onCancel }: MemberFormProps) => {
 
   const plan = membershipPlans.find(p => p.type === formData.planType);
 
+  const handlePhotoChange = (file?: File) => {
+    if (!file) {
+      setPhotoPreview(null);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -40,6 +59,7 @@ export const MemberForm = ({ member, onSubmit, onCancel }: MemberFormProps) => {
     
     try {
       const expiryDate = calculateExpiryDate(plan?.duration || 30);
+      const photoUrlToSave = photoPreview || DEFAULT_MEMBER_PHOTO;
 
       await onSubmit({
         name: formData.name,
@@ -59,6 +79,7 @@ export const MemberForm = ({ member, onSubmit, onCancel }: MemberFormProps) => {
         status: 'active',
         notes: formData.notes,
         whatsappOptIn: formData.whatsappOptIn,
+        photoUrl: photoUrlToSave,
       });
     } finally {
       setIsSubmitting(false);
@@ -109,6 +130,71 @@ export const MemberForm = ({ member, onSubmit, onCancel }: MemberFormProps) => {
             placeholder=""
             style={{width: '100%', padding: '0.75rem 1rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.95rem'}}
           />
+        </div>
+      </div>
+
+      {/* Photo Upload / Camera Capture */}
+      <div>
+        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#1e293b', marginBottom: '0.5rem' }}>
+          Member Photo
+        </label>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ width: '96px', height: '96px', borderRadius: '16px', overflow: 'hidden', background: '#f8fafc', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {photoPreview ? (
+              <img src={photoPreview} alt="Member" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ color: '#64748b', fontSize: '0.8rem', textAlign: 'center' }}>No photo</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+            <input
+              id="member-photo-upload"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handlePhotoChange(file);
+              }}
+            />
+            <label
+              htmlFor="member-photo-upload"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#fff',
+                color: '#0f172a',
+                fontWeight: 600,
+                cursor: 'pointer',
+                width: 'fit-content'
+              }}
+            >
+              Upload or take photo
+            </label>
+            {photoPreview && (
+              <button
+                type="button"
+                onClick={() => handlePhotoChange()}
+                style={{
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  border: '1px solid #f1f5f9',
+                  background: '#f8fafc',
+                  color: '#64748b',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  width: 'fit-content'
+                }}
+              >
+                Remove photo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -302,64 +388,25 @@ export const MemberForm = ({ member, onSubmit, onCancel }: MemberFormProps) => {
 
       {/* Action Buttons */}
       <div style={{display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', marginTop: 'auto'}}>
-        <button
+        <Button
           type="submit"
+          size="md"
+          fullWidth={isMobile}
+          variant="primary"
+          style={{ opacity: isSubmitting ? 0.8 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
           disabled={isSubmitting}
-          style={{
-            flex: 1,
-            padding: '0.85rem 1.5rem',
-            background: isSubmitting
-              ? 'linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)'
-              : 'linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '0.95rem',
-            fontWeight: '600',
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-            transition: 'all 200ms',
-            boxShadow: '0 2px 4px rgba(14, 165, 233, 0.2)',
-            opacity: isSubmitting ? 0.8 : 1
-          }}
-          onMouseEnter={(e) => {
-            if (!isSubmitting) {
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 8px rgba(14, 165, 233, 0.3)';
-              (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 4px rgba(14, 165, 233, 0.2)';
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-          }}
         >
           {isSubmitting ? 'Saving...' : member ? '✓ Update Member' : '+ Add Member'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          size="md"
+          variant="secondary"
+          fullWidth={isMobile}
           onClick={onCancel}
-          style={{
-            flex: 1,
-            padding: '0.85rem 1.5rem',
-            background: 'white',
-            color: '#64748b',
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            fontSize: '0.95rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 200ms'
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.backgroundColor = '#f8fafc';
-            (e.currentTarget as HTMLElement).style.borderColor = '#94a3b8';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.backgroundColor = 'white';
-            (e.currentTarget as HTMLElement).style.borderColor = '#cbd5e1';
-          }}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

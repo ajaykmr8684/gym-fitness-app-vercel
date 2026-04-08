@@ -27,8 +27,10 @@ export const Dashboard = () => {
   };
 
   const activeMembers = members.filter(m => m.status === 'active').length;
-  const totalRevenue = members.reduce((sum, m) => sum + m.amount, 0);
-  const paidAmount = members.reduce((sum, m) => sum + m.amountPaid, 0);
+  const totalRevenue = bills
+    .filter(b => b.status === 'paid')
+    .reduce((sum, b) => sum + (b.amountPaid || b.amount), 0);
+  const paidAmount = totalRevenue;
   const pendingBills = bills.filter(b => b.status === 'pending').length;
   const overdueAmount = bills.filter(b => b.status === 'overdue').reduce((sum, b) => sum + (b.amount - b.amountPaid), 0);
 

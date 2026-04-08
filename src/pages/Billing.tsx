@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Plus, Mail, MessageCircle, Download, Trash2, Search, FileText, CheckCircle2, Filter } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/Button';
+import { useToast } from '../components/Toast';
 import { useAppContext } from '../context/AppContext';
 import { addBill, updateBill, formatDate } from '../utils/db';
 import { sendBillEmail, sendBillWhatsApp } from '../utils/notifications';
@@ -9,12 +11,15 @@ import { Bill, Member } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export const Billing = () => {
-  const { members, bills, refreshData } = useAppContext();
+  const { members, bills, refreshData, loading, error } = useAppContext();
+  const toast = useToast();
   const isMobile = useIsMobile();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [processingBillId, setProcessingBillId] = useState<string | null>(null);
   const [billStatusFilter, setBillStatusFilter] = useState<'all' | 'pending' | 'paid' | 'overdue'>('all');
+  const [sortBy, setSortBy] = useState<'billingDate' | 'dueDate' | 'amount' | 'status'>('dueDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const getBillEffectiveStatus = (bill: Bill): 'paid' | 'pending' | 'overdue' => {
     if (bill.status === 'paid') return 'paid';
@@ -36,13 +41,27 @@ export const Billing = () => {
       b.memberName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.memberId.includes(searchTerm);
     if (!matchesSearch) return false;
-    if (billStatusFilter === 'all') return true;
-    return getBillEffectiveStatus(b) === billStatusFilter;
+    if (billStatusFilter !== 'all' && getBillEffectiveStatus(b) !== billStatusFilter) return false;
+    return true;
+  });
+
+  const visibleBills = [...filteredBills].sort((a, b) => {
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    if (sortBy === 'amount') {
+      return (a.amount - b.amount) * direction;
+    }
+    if (sortBy === 'status') {
+      return a.status.localeCompare(b.status) * direction;
+    }
+    if (sortBy === 'billingDate') {
+      return (new Date(a.billingDate).getTime() - new Date(b.billingDate).getTime()) * direction;
+    }
+    return (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()) * direction;
   });
 
   const handleCreateBill = async () => {
     if (!formData.memberId || !formData.amount) {
-      alert('Please fill in all required fields');
+      toast.error('Missing required fields', 'Please select a member and enter an amount.');
       return;
     }
 
@@ -71,9 +90,10 @@ export const Billing = () => {
         notes: '',
       });
       setIsModalOpen(false);
+      toast.success('Bill created', 'The new bill was added successfully.');
       await refreshData();
     } catch (error) {
-      alert('Error creating bill');
+      toast.error('Could not create bill', 'Please try again.');
       console.error(error);
     }
   };
@@ -92,10 +112,10 @@ export const Billing = () => {
       );
 
       if (sent) {
-        alert('Email draft opened in Gmail! You can review and send it.');
+        toast.success('Email draft opened', 'Review and send the message in Gmail.');
       }
     } catch (error) {
-      alert('Error opening Gmail');
+      toast.error('Could not open Gmail', 'Please make sure Gmail is available.');
       console.error(error);
     }
   };
@@ -113,18 +133,16 @@ export const Billing = () => {
       );
 
       if (sent) {
-        alert('WhatsApp Web opened! You can review and send the message.');
+        toast.success('WhatsApp opened', 'Review and send the message in WhatsApp Web.');
       }
     } catch (error) {
-      alert('Error opening WhatsApp');
+      toast.error('Could not open WhatsApp', 'Please make sure WhatsApp Web is available.');
       console.error(error);
     }
   };
 
   const handleDeleteBill = async (id: string) => {
-    // Since we can't delete in Firestore easily with updateDoc, we'll mark it as paid
-    // In a real app, you'd want actual delete capability
-    alert('Use the amount paid field to mark bills as completed');
+    toast.info('Bill delete not enabled', 'Use the amount paid field to mark bills as completed.');
   };
 
   const markAsPaid = async (bill: Bill) => {
@@ -136,9 +154,10 @@ export const Billing = () => {
         status: 'paid',
         amountPaid: bill.amount
       });
+
       await refreshData();
     } catch (error) {
-      alert('Error updating bill');
+      toast.error('Could not update bill', 'Please try again.');
       console.error(error);
     } finally {
       setProcessingBillId(null);
@@ -170,39 +189,26 @@ export const Billing = () => {
           <h1 style={{fontSize: isMobile ? '1.35rem' : '1.75rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>Billing</h1>
           <p style={{fontSize: '0.875rem', color: '#cbd5e1'}}>Manage and track member payments</p>
         </div>
-        <button
+        <Button
           onClick={() => setIsModalOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.85rem 1.5rem',
-            width: isMobile ? '100%' : 'auto',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '0.95rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 200ms',
-            boxShadow: '0 2px 4px rgba(14, 165, 233, 0.2)',
-            whiteSpace: 'nowrap'
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 8px rgba(14, 165, 233, 0.3)';
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 4px rgba(14, 165, 233, 0.2)';
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-          }}
+          icon={<Plus size={20} />}
+          size="md"
+          fullWidth={isMobile}
         >
-          <Plus size={20} />
-          <span>Create Bill</span>
-        </button>
+          Create Bill
+        </Button>
       </div>
+
+      {error && (
+        <div style={{ padding: '1rem', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+          {error}
+        </div>
+      )}
+      {loading && (
+        <div style={{ padding: '1rem', borderRadius: '10px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
+          Loading billing and member data...
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div style={{display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? '0.75rem' : '1rem'}}>
@@ -265,28 +271,53 @@ export const Billing = () => {
             }}
           />
         </div>
-        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, width: isMobile ? '100%' : 'auto'}}>
-          <Filter size={16} style={{color: '#64748b'}} />
-          <select
-            value={billStatusFilter}
-            onChange={e => setBillStatusFilter(e.target.value as 'all' | 'pending' | 'paid' | 'overdue')}
-            style={{
-              width: isMobile ? '100%' : 'auto',
-              padding: '0.75rem 1rem',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
-              background: 'white',
-              color: '#1e293b',
-              cursor: 'pointer',
-              fontFamily: 'inherit'
-            }}
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="overdue">Overdue</option>
-            <option value="paid">Paid</option>
-          </select>
+        <div style={{display: 'flex', gap: '0.75rem', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto', alignItems: 'center'}}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Filter size={16} style={{color: '#64748b'}} />
+            <select
+              value={billStatusFilter}
+              onChange={e => setBillStatusFilter(e.target.value as 'all' | 'pending' | 'paid' | 'overdue')}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                background: 'white',
+                color: '#1e293b',
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="overdue">Overdue</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as 'billingDate' | 'dueDate' | 'amount' | 'status')}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                background: 'white',
+                color: '#1e293b',
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              <option value="billingDate">Sort by Billing Date</option>
+              <option value="dueDate">Sort by Due Date</option>
+              <option value="amount">Sort by Amount</option>
+              <option value="status">Sort by Status</option>
+            </select>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}>
+              {sortDirection === 'asc' ? 'Asc' : 'Desc'}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -311,7 +342,7 @@ export const Billing = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredBills.map((bill) => (
+                {visibleBills.map((bill) => (
                   <tr 
                     key={bill.id} 
                     style={{

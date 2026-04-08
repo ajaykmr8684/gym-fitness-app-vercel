@@ -1,10 +1,12 @@
 import { useState, ReactNode } from 'react';
 import { Plus, Edit, Trash2, Search, Users, Eye, RefreshCw, Filter } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/Button';
+import { useToast } from '../components/Toast';
 import { MemberForm } from '../components/MemberForm';
 import { useAppContext } from '../context/AppContext';
 import { Member } from '../types';
-import { addMember, updateMember, deleteMember, formatDate, membershipPlans } from '../utils/db';
+import { addMember, addBill, updateMember, deleteMember, formatDate, membershipPlans } from '../utils/db';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'expired';
@@ -25,14 +27,25 @@ const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }>
   expired: { bg: '#fee2e2', color: '#991b1b', label: '● Expired' },
 };
 
+const calculateBillDueDate = (billingDate: string): string => {
+  const dueDate = new Date(billingDate);
+  dueDate.setDate(dueDate.getDate() + 7);
+  return dueDate.toISOString().split('T')[0];
+};
+
 export const Members = () => {
-  const { members, refreshData } = useAppContext();
+  const { members, refreshData, loading, error } = useAppContext();
+  const toast = useToast();
   const isMobile = useIsMobile();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [viewMember, setViewMember] = useState<Member | null>(null);
+  const [viewPhotoOnly, setViewPhotoOnly] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [planFilter, setPlanFilter] = useState<'all' | 'monthly' | 'quarterly' | 'halfyear' | 'annual'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'expiry' | 'amount'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [renewingMemberId, setRenewingMemberId] = useState<string | null>(null);
 
   const filteredMembers = members.filter((m) => {
@@ -41,18 +54,46 @@ export const Members = () => {
       m.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.phone.includes(searchTerm);
     if (!matchesSearch) return false;
-    if (statusFilter === 'all') return true;
-    return getEffectiveStatus(m) === statusFilter;
+    if (statusFilter !== 'all' && getEffectiveStatus(m) !== statusFilter) return false;
+    if (planFilter !== 'all' && m.planType !== planFilter) return false;
+    return true;
+  });
+
+  const visibleMembers = [...filteredMembers].sort((a, b) => {
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name) * direction;
+    }
+    if (sortBy === 'expiry') {
+      return (new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()) * direction;
+    }
+    return (a.amount - b.amount) * direction;
   });
 
   const handleAddMember = async (data: Omit<Member, 'id'>) => {
     try {
-      await addMember(data);
+      const newMember = await addMember(data);
+
+      await addBill({
+        memberId: newMember.id,
+        memberName: newMember.name,
+        planType: newMember.planType,
+        amount: newMember.amount,
+        amountPaid: 0,
+        billingDate: new Date().toISOString().split('T')[0],
+        dueDate: calculateBillDueDate(new Date().toISOString().split('T')[0]),
+        status: 'pending',
+        notes: 'Automatically created membership bill',
+        emailSent: false,
+        whatsappSent: false,
+      });
+
+      toast.success('Member added', 'A pending bill was created for the new membership.');
       setIsModalOpen(false);
       setSelectedMember(null);
       await refreshData();
     } catch (error) {
-      alert('Error adding member');
+      toast.error('Could not add member', 'Please try again or check your network.');
       console.error(error);
     }
   };
@@ -61,11 +102,12 @@ export const Members = () => {
     if (!selectedMember) return;
     try {
       await updateMember(selectedMember.id, data);
+      toast.success('Member updated', 'Member details saved successfully.');
       setIsModalOpen(false);
       setSelectedMember(null);
       await refreshData();
     } catch (error) {
-      alert('Error updating member');
+      toast.error('Could not update member', 'Please try again or check your network.');
       console.error(error);
     }
   };
@@ -74,9 +116,10 @@ export const Members = () => {
     if (window.confirm('Are you sure you want to delete this member?')) {
       try {
         await deleteMember(id);
+        toast.success('Member deleted', 'The member record was removed successfully.');
         await refreshData();
       } catch (error) {
-        alert('Error deleting member');
+        toast.error('Could not delete member', 'Please try again.');
         console.error(error);
       }
     }
@@ -112,9 +155,10 @@ export const Members = () => {
       const newExpiry = base.toISOString().split('T')[0];
 
       await updateMember(member.id, { expiryDate: newExpiry, status: 'active' });
+      toast.success('Membership renewed', `${member.name}'s membership has been extended.`);
       await refreshData();
     } catch (error) {
-      alert('Error renewing member');
+      toast.error('Could not renew member', 'Please try again.');
       console.error(error);
     } finally {
       setRenewingMemberId(null);
@@ -140,43 +184,30 @@ export const Members = () => {
           <h1 style={{ fontSize: isMobile ? '1.35rem' : '1.75rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Members</h1>
           <p style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>Total: {members.length} members</p>
         </div>
-        <button
+        <Button
           onClick={handleOpenAddModal}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.85rem 1.5rem',
-            width: isMobile ? '100%' : 'auto',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '0.95rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 200ms',
-            boxShadow: '0 2px 4px rgba(14, 165, 233, 0.2)',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 8px rgba(14, 165, 233, 0.3)';
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 4px rgba(14, 165, 233, 0.2)';
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-          }}
+          icon={<Plus size={20} />}
+          size="md"
+          fullWidth={isMobile}
         >
-          <Plus size={20} />
-          <span>Add Member</span>
-        </button>
+          Add Member
+        </Button>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: isMobile ? 'stretch' : 'center', flexDirection: isMobile ? 'column' : 'row' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '0.875rem', color: '#94a3b8' }} />
+      {error && (
+        <div style={{ padding: '1rem', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+          {error}
+        </div>
+      )}
+      {loading && (
+        <div style={{ padding: '1rem', borderRadius: '10px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
+          Loading members and billing details...
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '0.95rem', color: '#94a3b8' }} />
           <input
             type="text"
             placeholder="Search by name, email, or phone..."
@@ -203,28 +234,76 @@ export const Members = () => {
             }}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, width: isMobile ? '100%' : 'auto' }}>
-          <Filter size={16} style={{ color: '#64748b' }} />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            style={{
-              width: isMobile ? '100%' : 'auto',
-              padding: '0.75rem 1rem',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
-              background: 'white',
-              color: '#1e293b',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="expired">Expired</option>
-          </select>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Filter size={16} style={{ color: '#64748b' }} />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                background: 'white',
+                color: '#1e293b',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="expired">Expired</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <select
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value as 'all' | 'monthly' | 'quarterly' | 'halfyear' | 'annual')}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                background: 'white',
+                color: '#1e293b',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="all">All Plans</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="halfyear">Half Year</option>
+              <option value="annual">Annual</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'name' | 'expiry' | 'amount')}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                background: 'white',
+                color: '#1e293b',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="name">Sort by Name</option>
+              <option value="expiry">Sort by Expiry</option>
+              <option value="amount">Sort by Amount</option>
+            </select>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+            >
+              {sortDirection === 'asc' ? 'Asc' : 'Desc'}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -244,7 +323,7 @@ export const Members = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredMembers.map((member) => {
+              {visibleMembers.map((member) => {
                 const effStatus = getEffectiveStatus(member);
                 const badge = STATUS_BADGE[effStatus];
                 return (
@@ -260,17 +339,38 @@ export const Members = () => {
                           style={{
                             width: '32px',
                             height: '32px',
-                            background: 'linear-gradient(135deg, #0ea5e9, #0369a1)',
                             borderRadius: '50%',
+                            overflow: 'hidden',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            background: member.photoUrl ? 'transparent' : 'linear-gradient(135deg, #0ea5e9, #0369a1)',
                             color: 'white',
                             fontWeight: 'bold',
                             fontSize: '0.85rem',
+                            transition: 'transform 200ms ease',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => {
+                            setViewMember(member);
+                            setViewPhotoOnly(true);
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.transform = 'scale(1.3)';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
                           }}
                         >
-                          {member.name.charAt(0).toUpperCase()}
+                          {member.photoUrl ? (
+                            <img
+                              src={member.photoUrl}
+                              alt={member.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            member.name.charAt(0).toUpperCase()
+                          )}
                         </div>
                         <button
                           onClick={() => setViewMember(member)}
@@ -377,15 +477,23 @@ export const Members = () => {
         />
       </Modal>
 
-      <Modal isOpen={viewMember !== null} title="Member Details" onClose={() => setViewMember(null)}>
+      <Modal isOpen={viewMember !== null} title={viewPhotoOnly ? 'Photo Preview' : 'Member Details'} onClose={() => {
+        setViewMember(null);
+        setViewPhotoOnly(false);
+      }}>
         {viewMember && (
           <MemberDetailView
             member={viewMember}
+            imageOnly={viewPhotoOnly}
             onEdit={() => {
               setViewMember(null);
+              setViewPhotoOnly(false);
               handleOpenEditModal(viewMember);
             }}
-            onClose={() => setViewMember(null)}
+            onClose={() => {
+              setViewMember(null);
+              setViewPhotoOnly(false);
+            }}
           />
         )}
       </Modal>
@@ -420,10 +528,12 @@ const Row = ({ label, value }: { label: string; value: ReactNode }) => (
 
 const MemberDetailView = ({
   member,
+  imageOnly,
   onEdit,
   onClose,
 }: {
   member: Member;
+  imageOnly?: boolean;
   onEdit: () => void;
   onClose: () => void;
 }) => {
@@ -437,6 +547,24 @@ const MemberDetailView = ({
     .filter(Boolean)
     .join(' + ');
 
+  if (imageOnly) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ width: '100%', maxWidth: '520px', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 25px 60px rgba(15, 23, 42, 0.18)' }}>
+          <img
+            src={member.photoUrl}
+            alt={member.name}
+            style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'cover' }}
+          />
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>{member.name}</p>
+          <p style={{ margin: '0.5rem 0 0', color: '#64748b' }}>Click outside or close to return to member details.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: '#f0f9ff', borderRadius: '8px' }}>
@@ -444,18 +572,30 @@ const MemberDetailView = ({
           style={{
             width: '52px',
             height: '52px',
-            background: 'linear-gradient(135deg, #0ea5e9, #0369a1)',
             borderRadius: '50%',
+            overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            background: member.photoUrl ? 'transparent' : 'linear-gradient(135deg, #0ea5e9, #0369a1)',
             color: 'white',
             fontWeight: 'bold',
             fontSize: '1.25rem',
             flexShrink: 0,
+            transition: 'transform 200ms ease',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
           }}
         >
-          {member.name.charAt(0).toUpperCase()}
+          {member.photoUrl ? (
+            <img src={member.photoUrl} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            member.name.charAt(0).toUpperCase()
+          )}
         </div>
         <div>
           <p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>{member.name}</p>

@@ -17,6 +17,7 @@ export interface Member {
   status: 'active' | 'inactive' | 'expired';
   notes?: string;
   whatsappOptIn: boolean;
+  photoUrl?: string;
 }
 
 export interface Bill {
